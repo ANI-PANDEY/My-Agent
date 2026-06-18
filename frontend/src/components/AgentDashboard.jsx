@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Send, Bot, User, Loader2, Database, Globe, BrainCircuit } from 'lucide-react';
+import { Send, Bot, User, Loader2, Database, Globe, BrainCircuit, Sparkles } from 'lucide-react';
 
 export default function AgentDashboard() {
   const [messages, setMessages] = useState([]);
@@ -152,38 +152,38 @@ export default function AgentDashboard() {
   const renderAgentState = () => {
     if (!agentState || agentState === 'typing') return null;
     
-    let icon = <BrainCircuit className="w-4 h-4 animate-pulse" />;
-    let text = "Agent is reasoning...";
+    let icon = <BrainCircuit className="w-4 h-4 animate-pulse text-indigo-400" />;
+    let text = "Neural reasoning...";
     
     if (agentState === 'database') {
-        icon = <Database className="w-4 h-4 animate-bounce text-blue-500" />;
-        text = "Querying internal user database...";
+        icon = <Database className="w-4 h-4 animate-bounce text-cyan-400" />;
+        text = "Accessing encrypted data...";
     } else if (agentState === 'searching') {
-        icon = <Globe className="w-4 h-4 animate-spin text-green-500" />;
-        text = "Scraping the web for answers...";
+        icon = <Globe className="w-4 h-4 animate-spin text-purple-400" />;
+        text = "Scanning global networks...";
     }
 
     return (
-      <div className="flex items-center space-x-2 text-xs font-medium text-gray-500 bg-white border border-gray-200 px-3 py-1.5 rounded-full w-max ml-12 mb-2 shadow-sm animate-in fade-in slide-in-from-bottom-2">
+      <div className="flex items-center space-x-2 text-xs font-medium text-gray-300 glass-panel px-4 py-2 rounded-full w-max ml-12 mb-4 animate-fade-in-up">
         {icon}
-        <span>{text}</span>
+        <span className="tracking-wide">{text}</span>
       </div>
     );
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 font-sans">
-      {/* Header */}
-      <header className="bg-white border-b shadow-sm py-4 px-6 flex items-center justify-between sticky top-0 z-10">
+    <div className="flex flex-col h-screen bg-animated-gradient font-sans text-gray-100">
+      {/* Floating Header */}
+      <header className="glass-panel sticky top-0 z-10 py-4 px-6 flex items-center justify-between border-x-0 border-t-0 shadow-lg shadow-indigo-900/10">
         <div className="flex items-center space-x-3">
-          <div className="bg-indigo-600 p-2 rounded-lg shadow-inner">
-            <Bot className="text-white w-6 h-6" />
+          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 rounded-xl shadow-lg shadow-indigo-500/30">
+            <Sparkles className="text-white w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-800">OmniAgent Dashboard</h1>
-            <p className="text-xs text-green-500 font-medium flex items-center">
-               <span className="w-2 h-2 bg-green-500 rounded-full mr-1.5 animate-pulse"></span>
-               System Online & Connected
+            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 tracking-tight">Enterprise AI Assistant</h1>
+            <p className="text-xs text-green-400 font-medium flex items-center mt-0.5">
+               <span className="w-2 h-2 bg-green-400 rounded-full mr-1.5 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.6)]"></span>
+               Quantum Core Online
             </p>
           </div>
         </div>
@@ -191,14 +191,18 @@ export default function AgentDashboard() {
 
       {/* Chat Area */}
       <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
-        <div className="max-w-4xl mx-auto flex flex-col space-y-6">
+        <div className="max-w-4xl mx-auto flex flex-col space-y-6 pb-24">
             
           {/* Empty State */}
           {messages.length === 0 && (
-              <div className="text-center text-gray-400 mt-20">
-                  <Bot className="w-16 h-16 mx-auto mb-4 opacity-20" />
-                  <p className="text-lg font-medium text-gray-600">Hello! I am your Autonomous Agent.</p>
-                  <p className="text-sm mt-2">Ask me to look up user data, search the web, or analyze trends.</p>
+              <div className="text-center mt-32 animate-zoom-in">
+                  <div className="inline-flex items-center justify-center w-24 h-24 rounded-full glass-panel mb-6 shadow-[0_0_40px_rgba(99,102,241,0.2)]">
+                      <Sparkles className="w-10 h-10 text-indigo-400" />
+                  </div>
+                  <h2 className="text-3xl font-semibold text-white tracking-tight mb-3">How can I assist you?</h2>
+                  <p className="text-gray-400 max-w-md mx-auto text-sm leading-relaxed">
+                      Powered by LangGraph and Groq. I can reason across vast networks, query internal databases, and stream solutions instantly.
+                  </p>
               </div>
           )}
 
@@ -206,63 +210,64 @@ export default function AgentDashboard() {
           {messages.map((msg, idx) => (
             <div 
               key={idx} 
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in-up`}
             >
-              <div className={`flex space-x-3 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+              <div className={`flex space-x-4 max-w-[85%] md:max-w-[75%] ${msg.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                
                 {/* Avatar */}
-                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center shadow-sm ${msg.role === 'user' ? 'bg-indigo-100 border border-indigo-200' : 'bg-indigo-600'}`}>
-                  {msg.role === 'user' ? <User className="text-indigo-600 w-4 h-4" /> : <Bot className="text-white w-4 h-4" />}
+                <div className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center shadow-lg ${msg.role === 'user' ? 'bg-white/10 border border-white/20 backdrop-blur-md' : 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/30'}`}>
+                  {msg.role === 'user' ? <User className="text-gray-200 w-4 h-4" /> : <Bot className="text-white w-5 h-5" />}
                 </div>
                 
                 {/* Message Bubble */}
-                <div className={`px-5 py-4 rounded-2xl shadow-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-sm' : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm'}`}>
+                <div className={`px-5 py-4 rounded-2xl shadow-lg ${msg.role === 'user' ? 'bg-gradient-to-br from-indigo-600 to-purple-700 text-white rounded-tr-sm border border-white/10' : 'glass-panel text-gray-100 rounded-tl-sm'}`}>
                   {msg.role === 'agent' ? (
-                     <div className="prose prose-sm max-w-none prose-indigo leading-relaxed">
+                     <div className="prose-dark leading-relaxed">
                         <ReactMarkdown>{msg.content}</ReactMarkdown>
                         {/* Blinking Cursor while streaming */}
-                        {msg.isStreaming && <span className="inline-block w-1.5 h-4 ml-1 bg-indigo-500 animate-pulse align-middle"></span>}
+                        {msg.isStreaming && <span className="inline-block w-1.5 h-4 ml-1 bg-indigo-400 animate-pulse align-middle rounded-sm shadow-[0_0_5px_rgba(129,140,248,0.8)]"></span>}
                      </div>
                   ) : (
-                     <p className="text-sm leading-relaxed">{msg.content}</p>
+                     <p className="text-[15px] leading-relaxed">{msg.content}</p>
                   )}
                 </div>
               </div>
             </div>
           ))}
 
-          {/* Agent Action Status (e.g. "Querying database...") */}
+          {/* Agent Action Status */}
           {renderAgentState()}
 
           {/* Invisible div for auto-scrolling */}
-          <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} className="h-4" />
         </div>
       </main>
 
-      {/* Input Form Area */}
-      <footer className="bg-white border-t p-4 pb-8 md:p-6 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+      {/* Floating Input Area */}
+      <footer className="fixed bottom-0 w-full p-4 md:p-6 bg-gradient-to-t from-[#0B0C10] via-[#0B0C10]/90 to-transparent pb-8">
         <div className="max-w-4xl mx-auto">
           <form 
             onSubmit={handleSubmit} 
-            className="flex items-center bg-gray-50 border border-gray-200 rounded-full p-1.5 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition-all"
+            className="flex items-center glass-input rounded-full p-2 transition-all focus-within:ring-2 focus-within:ring-indigo-500/50 focus-within:border-indigo-400"
           >
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Give the agent a task (e.g., 'What is the subscription status for user_123?')..."
-              className="flex-1 bg-transparent border-none focus:ring-0 px-4 py-2 text-gray-700 placeholder-gray-400 outline-none"
+              placeholder="Ask anything..."
+              className="flex-1 bg-transparent border-none focus:ring-0 px-5 py-3 text-white placeholder-gray-400 outline-none font-medium"
               disabled={isLoading}
             />
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white p-2.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-md"
+              className="bg-indigo-600 hover:bg-indigo-500 text-white p-3.5 rounded-full transition-all disabled:opacity-50 disabled:hover:bg-indigo-600 disabled:cursor-not-allowed flex items-center justify-center shadow-[0_0_15px_rgba(79,70,229,0.5)] hover:shadow-[0_0_20px_rgba(99,102,241,0.7)]"
             >
               {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5 ml-0.5" />}
             </button>
           </form>
-          <p className="text-center text-xs text-gray-400 mt-3 font-medium">
-             Agent logic powered by LangGraph. Verify critical actions.
+          <p className="text-center text-xs text-gray-500 mt-4 font-medium tracking-wide">
+             Secure Multi-Agent Environment • Groq Engine
           </p>
         </div>
       </footer>
