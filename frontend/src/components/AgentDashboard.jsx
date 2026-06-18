@@ -175,7 +175,7 @@ export default function AgentDashboard() {
   return (
     <div className="flex flex-col h-screen bg-animated-gradient font-sans text-gray-100">
       {/* Floating Header */}
-      <header className="glass-panel sticky top-0 z-10 py-4 px-6 flex items-center justify-between border-x-0 border-t-0 shadow-lg shadow-indigo-900/10">
+      <header className="glass-panel sticky top-0 z-10 py-3 px-4 md:py-4 md:px-6 flex items-center justify-between border-x-0 border-t-0 shadow-lg shadow-indigo-900/10 backdrop-blur-xl">
         <div className="flex items-center space-x-3">
           <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 rounded-xl shadow-lg shadow-indigo-500/30">
             <Sparkles className="text-white w-6 h-6" />
@@ -192,11 +192,11 @@ export default function AgentDashboard() {
 
       {/* Chat Area */}
       <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
-        <div className="max-w-4xl mx-auto flex flex-col space-y-6 pb-24">
+        <div className="max-w-4xl mx-auto flex flex-col space-y-6 pb-36 md:pb-28">
             
           {/* Empty State */}
           {messages.length === 0 && (
-              <div className="text-center mt-32 animate-zoom-in">
+              <div className="text-center mt-16 md:mt-32 animate-zoom-in px-4">
                   <div className="inline-flex items-center justify-center w-24 h-24 rounded-full glass-panel mb-6 shadow-[0_0_40px_rgba(99,102,241,0.2)]">
                       <Sparkles className="w-10 h-10 text-indigo-400" />
                   </div>
@@ -256,7 +256,7 @@ export default function AgentDashboard() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask anything..."
-              className="flex-1 bg-transparent border-none focus:ring-0 px-5 py-3 text-white placeholder-gray-400 outline-none font-medium"
+              className="flex-1 bg-transparent border-none focus:ring-0 px-4 py-2 md:px-5 md:py-3 text-white placeholder-gray-400 outline-none font-medium text-base"
               disabled={isLoading}
             />
             <button
