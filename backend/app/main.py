@@ -8,7 +8,7 @@ app = FastAPI(title=settings.PROJECT_NAME)
 # Allow Next.js frontend to communicate with FastAPI
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"], # Next.js dev server
+    allow_origins=["*"], # Allow all origins for production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
