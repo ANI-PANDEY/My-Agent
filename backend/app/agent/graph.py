@@ -49,9 +49,11 @@ async def agent_node(state: AgentState, config: RunnableConfig) -> dict:
     try:
         response = await llm_with_tools.ainvoke(full_messages, config)
     except Exception as e:
-        if "tool_use_failed" in str(e) or "BadRequestError" in str(type(e)):
+        error_str = str(e)
+        type_str = str(type(e))
+        if "tool_use_failed" in error_str or "BadRequestError" in type_str or "Failed to call a function" in error_str:
             import logging
-            logging.warning("Groq native tool parse failed. Falling back to base LLM.")
+            logging.warning(f"Groq native tool parse failed ({error_str}). Falling back to base LLM.")
             response = await llm.ainvoke(full_messages, config)
         else:
             raise e
