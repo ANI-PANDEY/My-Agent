@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Send, Bot, User, Loader2, Database, Globe, BrainCircuit, Sparkles } from 'lucide-react';
+import { Send, Bot, User, Loader2, Database, Globe, BrainCircuit, Sparkles, Paperclip, X } from 'lucide-react';
 
 export default function AgentDashboard() {
   const [messages, setMessages] = useState([]);
@@ -11,6 +11,8 @@ export default function AgentDashboard() {
   
   // Tracks the internal LangGraph state: 'thinking', 'database', 'searching', 'typing'
   const [agentState, setAgentState] = useState(null); 
+  const [attachments, setAttachments] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
   
   const messagesEndRef = useRef(null);
 
@@ -23,17 +25,65 @@ export default function AgentDashboard() {
     scrollToBottom();
   }, [messages, agentState]);
 
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setAttachments((prev) => [...prev, ...Array.from(e.target.files)]);
+    }
+  };
+
+  const removeAttachment = (idx) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== idx));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if ((!input.trim() && attachments.length === 0) || isLoading || isUploading) return;
 
-    // 1. Add User Message
-    const userMessage = { role: 'user', content: input };
+    // 1. Add User Message immediately for UX
+    let displayContent = input;
+    if (attachments.length > 0) {
+        displayContent += `\n\n*(Attached ${attachments.length} file${attachments.length > 1 ? 's' : ''})*`;
+    }
+    const userMessage = { role: 'user', content: displayContent };
     setMessages((prev) => [...prev, userMessage]);
+    
+    const userPrompt = input;
+    const currentAttachments = [...attachments];
     setInput('');
+    setAttachments([]);
+    
+    // Upload files if any
+    let extractedContext = "";
+    if (currentAttachments.length > 0) {
+        setIsUploading(true);
+        try {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+            for (const file of currentAttachments) {
+                const formData = new FormData();
+                formData.append('file', file);
+                const uploadRes = await fetch(`${apiUrl}/api/upload`, {
+                    method: 'POST',
+                    body: formData,
+                });
+                if (!uploadRes.ok) throw new Error(`Upload failed for ${file.name}`);
+                const data = await uploadRes.json();
+                extractedContext += `\n\n[Content from attached file: ${file.name}]\n${data.extracted_text}`;
+            }
+        } catch (err) {
+            console.error(err);
+            setMessages((prev) => [...prev, { role: 'system', content: `Error processing attachment: ${err.message}` }]);
+            setIsUploading(false);
+            return;
+        }
+        setIsUploading(false);
+    }
+
     setIsLoading(true);
     setAgentState('thinking');
     
+    // Combine input with extracted file content for the backend
+    const finalPayloadMessage = userPrompt + extractedContext;
+
     // 2. Add Empty Agent Message Placeholder (marked as streaming)
     setMessages((prev) => [...prev, { role: 'agent', content: '', isStreaming: true }]);
 
@@ -44,7 +94,7 @@ export default function AgentDashboard() {
       const response = await fetch(`${apiUrl}/api/chat/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: input, session_id: 'session-123' })
+        body: JSON.stringify({ message: finalPayloadMessage, session_id: 'session-123' })
       });
 
       if (!response.ok) throw new Error('Network response was not ok');
@@ -247,24 +297,39 @@ export default function AgentDashboard() {
       {/* Floating Input Area */}
       <footer className="fixed bottom-0 w-full p-4 md:p-6 bg-gradient-to-t from-[#0B0C10] via-[#0B0C10]/90 to-transparent pb-8">
         <div className="max-w-4xl mx-auto">
+          {/* Attachment Preview Area */}
+          {attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {attachments.map((file, idx) => (
+                <div key={idx} className="flex items-center space-x-2 bg-indigo-500/20 border border-indigo-500/30 text-indigo-200 px-3 py-1.5 rounded-full text-xs font-medium animate-fade-in-up">
+                  <span className="truncate max-w-[150px]">{file.name}</span>
+                  <button onClick={() => removeAttachment(idx)} className="hover:text-white transition-colors"><X className="w-3.5 h-3.5" /></button>
+                </div>
+              ))}
+            </div>
+          )}
           <form 
             onSubmit={handleSubmit} 
             className="flex items-center glass-input rounded-full p-2 transition-all focus-within:ring-2 focus-within:ring-indigo-500/50 focus-within:border-indigo-400"
           >
+            <label className="cursor-pointer text-gray-400 hover:text-indigo-400 transition-colors p-2 rounded-full hover:bg-white/5 ml-1">
+              <Paperclip className="w-5 h-5" />
+              <input type="file" multiple className="hidden" onChange={handleFileChange} />
+            </label>
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask anything..."
-              className="flex-1 bg-transparent border-none focus:ring-0 px-4 py-2 md:px-5 md:py-3 text-white placeholder-gray-400 outline-none font-medium text-base"
-              disabled={isLoading}
+              placeholder="Ask anything or attach files..."
+              className="flex-1 bg-transparent border-none focus:ring-0 px-3 py-2 md:px-4 md:py-3 text-white placeholder-gray-400 outline-none font-medium text-base"
+              disabled={isLoading || isUploading}
             />
             <button
               type="submit"
-              disabled={isLoading || !input.trim()}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white p-3.5 rounded-full transition-all disabled:opacity-50 disabled:hover:bg-indigo-600 disabled:cursor-not-allowed flex items-center justify-center shadow-[0_0_15px_rgba(79,70,229,0.5)] hover:shadow-[0_0_20px_rgba(99,102,241,0.7)]"
+              disabled={isLoading || isUploading || (!input.trim() && attachments.length === 0)}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white p-3.5 rounded-full transition-all disabled:opacity-50 disabled:hover:bg-indigo-600 disabled:cursor-not-allowed flex items-center justify-center shadow-[0_0_15px_rgba(79,70,229,0.5)] hover:shadow-[0_0_20px_rgba(99,102,241,0.7)] ml-2"
             >
-              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5 ml-0.5" />}
+              {isLoading || isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5 ml-0.5" />}
             </button>
           </form>
           <p className="text-center text-xs text-gray-500 mt-4 font-medium tracking-wide">
