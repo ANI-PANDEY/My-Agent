@@ -2,12 +2,16 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Send, Bot, User, Loader2, Database, Globe, BrainCircuit, Sparkles, Paperclip, X } from 'lucide-react';
+import { Send, Bot, User, Loader2, Database, Globe, BrainCircuit, Sparkles, Paperclip, X, Menu, MessageSquare, Plus, Trash2 } from 'lucide-react';
 
 export default function AgentDashboard() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  const [sessions, setSessions] = useState([]);
+  const [activeSessionId, setActiveSessionId] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Tracks the internal LangGraph state: 'thinking', 'database', 'searching', 'typing'
   const [agentState, setAgentState] = useState(null); 
@@ -20,6 +24,78 @@ export default function AgentDashboard() {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  useEffect(() => {
+    const saved = localStorage.getItem('agent_sessions');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      setSessions(parsed);
+      if (parsed.length > 0) {
+        setActiveSessionId(parsed[0].id);
+        setMessages(parsed[0].messages || []);
+      } else {
+        createNewSession();
+      }
+    } else {
+      createNewSession();
+    }
+  }, []);
+
+  const createNewSession = () => {
+    const newId = `session-${Date.now()}`;
+    const newSession = { id: newId, name: 'New Chat', messages: [] };
+    setSessions(prev => [newSession, ...prev]);
+    setActiveSessionId(newId);
+    setMessages([]);
+    if (window.innerWidth < 768) setIsSidebarOpen(false);
+  };
+
+  const switchSession = (id) => {
+    const session = sessions.find(s => s.id === id);
+    if (session) {
+      setActiveSessionId(id);
+      setMessages(session.messages || []);
+      if (window.innerWidth < 768) setIsSidebarOpen(false);
+    }
+  };
+
+  const deleteSession = (e, id) => {
+    e.stopPropagation();
+    const updated = sessions.filter(s => s.id !== id);
+    setSessions(updated);
+    if (activeSessionId === id) {
+      if (updated.length > 0) {
+        setActiveSessionId(updated[0].id);
+        setMessages(updated[0].messages || []);
+      } else {
+        createNewSession();
+      }
+    }
+  };
+
+  // Save messages to current session
+  useEffect(() => {
+    if (activeSessionId && messages.length > 0) {
+      setSessions(prev => prev.map(s => {
+        if (s.id === activeSessionId) {
+          let newName = s.name;
+          if (newName === 'New Chat') {
+             const firstUser = messages.find(m => m.role === 'user');
+             if (firstUser) newName = firstUser.content.substring(0, 30) + '...';
+          }
+          return { ...s, name: newName, messages };
+        }
+        return s;
+      }));
+    }
+  }, [messages, activeSessionId]);
+
+  // Persist to localstorage whenever sessions change
+  useEffect(() => {
+    if (sessions.length > 0) {
+      localStorage.setItem('agent_sessions', JSON.stringify(sessions));
+    }
+  }, [sessions]);
 
   useEffect(() => {
     scrollToBottom();
@@ -84,6 +160,10 @@ export default function AgentDashboard() {
     // Combine input with extracted file content for the backend
     const finalPayloadMessage = userPrompt + extractedContext;
 
+    // Combines previous UI messages + new actual payload
+    const payloadMessages = messages.map(m => ({ role: m.role, content: m.content }));
+    payloadMessages.push({ role: 'user', content: finalPayloadMessage });
+
     // 2. Add Empty Agent Message Placeholder (marked as streaming)
     setMessages((prev) => [...prev, { role: 'agent', content: '', isStreaming: true }]);
 
@@ -94,7 +174,7 @@ export default function AgentDashboard() {
       const response = await fetch(`${apiUrl}/api/chat/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: finalPayloadMessage, session_id: 'session-123' })
+        body: JSON.stringify({ messages: payloadMessages, session_id: activeSessionId })
       });
 
       if (!response.ok) throw new Error('Network response was not ok');
@@ -223,22 +303,54 @@ export default function AgentDashboard() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-animated-gradient font-sans text-gray-100">
-      {/* Floating Header */}
-      <header className="glass-panel sticky top-0 z-10 py-3 px-4 md:py-4 md:px-6 flex items-center justify-between border-x-0 border-t-0 shadow-lg shadow-indigo-900/10 backdrop-blur-xl">
-        <div className="flex items-center space-x-3">
-          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 rounded-xl shadow-lg shadow-indigo-500/30">
-            <Sparkles className="text-white w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 tracking-tight">Enterprise AI Assistant</h1>
-            <p className="text-xs text-green-400 font-medium flex items-center mt-0.5">
-               <span className="w-2 h-2 bg-green-400 rounded-full mr-1.5 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.6)]"></span>
-               Quantum Core Online
-            </p>
-          </div>
+    <div className="flex h-screen bg-animated-gradient font-sans text-gray-100 overflow-hidden">
+      
+      {/* Sidebar Overlay for Mobile */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 bg-black/60 z-40 md:hidden" onClick={() => setIsSidebarOpen(false)} />
+      )}
+
+      {/* Sidebar History */}
+      <div className={`fixed inset-y-0 left-0 z-50 w-72 glass-panel border-r border-white/10 transform transition-transform duration-300 ease-in-out flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 bg-[#0B0C10]/95 backdrop-blur-2xl`}>
+        <div className="p-5 flex items-center justify-between border-b border-white/10">
+          <h2 className="font-semibold text-lg flex items-center gap-2 text-white tracking-wide"><MessageSquare className="w-5 h-5 text-indigo-400"/> History</h2>
+          <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-gray-400 hover:text-white transition-colors p-1"><X className="w-6 h-6"/></button>
         </div>
-      </header>
+        <div className="p-4">
+          <button onClick={createNewSession} className="w-full py-3 px-4 bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors shadow-inner text-indigo-100">
+            <Plus className="w-4 h-4" /> New Chat
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-1.5 custom-scrollbar">
+          {sessions.map(s => (
+             <div key={s.id} onClick={() => switchSession(s.id)} className={`group cursor-pointer px-4 py-3.5 rounded-xl text-sm flex items-center justify-between transition-all duration-200 ${activeSessionId === s.id ? 'bg-indigo-600/30 border border-indigo-500/50 text-white shadow-md' : 'hover:bg-white/5 text-gray-400 border border-transparent'}`}>
+                <span className="truncate pr-3 font-medium">{s.name}</span>
+                <button onClick={(e) => deleteSession(e, s.id)} className={`opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 transition-opacity p-1 rounded-md hover:bg-white/10 ${activeSessionId === s.id ? 'opacity-100 text-indigo-200 hover:text-red-300 hover:bg-indigo-500/40' : ''}`}><Trash2 className="w-4 h-4" /></button>
+             </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Chat Content */}
+      <div className="flex-1 flex flex-col h-screen relative w-full">
+        {/* Floating Header */}
+        <header className="glass-panel sticky top-0 z-10 py-3 px-4 md:py-4 md:px-6 flex items-center justify-between border-x-0 border-t-0 shadow-lg shadow-indigo-900/10 backdrop-blur-xl bg-[#0B0C10]/80">
+          <div className="flex items-center space-x-3">
+            <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 mr-1 text-gray-300 hover:text-white rounded-lg hover:bg-white/10 transition-colors">
+              <Menu className="w-6 h-6" />
+            </button>
+            <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 rounded-xl shadow-lg shadow-indigo-500/30 hidden sm:block">
+              <Sparkles className="text-white w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 tracking-tight">Enterprise AI</h1>
+              <p className="text-xs text-green-400 font-medium flex items-center mt-0.5">
+                 <span className="w-2 h-2 bg-green-400 rounded-full mr-1.5 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.6)]"></span>
+                 Quantum Core
+              </p>
+            </div>
+          </div>
+        </header>
 
       {/* Chat Area */}
       <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
@@ -294,49 +406,50 @@ export default function AgentDashboard() {
         </div>
       </main>
 
-      {/* Floating Input Area */}
-      <footer className="fixed bottom-0 w-full p-4 md:p-6 bg-gradient-to-t from-[#0B0C10] via-[#0B0C10]/90 to-transparent pb-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Attachment Preview Area */}
-          {attachments.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-3">
-              {attachments.map((file, idx) => (
-                <div key={idx} className="flex items-center space-x-2 bg-indigo-500/20 border border-indigo-500/30 text-indigo-200 px-3 py-1.5 rounded-full text-xs font-medium animate-fade-in-up">
-                  <span className="truncate max-w-[150px]">{file.name}</span>
-                  <button onClick={() => removeAttachment(idx)} className="hover:text-white transition-colors"><X className="w-3.5 h-3.5" /></button>
-                </div>
-              ))}
-            </div>
-          )}
-          <form 
-            onSubmit={handleSubmit} 
-            className="flex items-center glass-input rounded-full p-2 transition-all focus-within:ring-2 focus-within:ring-indigo-500/50 focus-within:border-indigo-400"
-          >
-            <label className="cursor-pointer text-gray-400 hover:text-indigo-400 transition-colors p-2 rounded-full hover:bg-white/5 ml-1">
-              <Paperclip className="w-5 h-5" />
-              <input type="file" multiple className="hidden" onChange={handleFileChange} />
-            </label>
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask anything or attach files..."
-              className="flex-1 bg-transparent border-none focus:ring-0 px-3 py-2 md:px-4 md:py-3 text-white placeholder-gray-400 outline-none font-medium text-base"
-              disabled={isLoading || isUploading}
-            />
-            <button
-              type="submit"
-              disabled={isLoading || isUploading || (!input.trim() && attachments.length === 0)}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white p-3.5 rounded-full transition-all disabled:opacity-50 disabled:hover:bg-indigo-600 disabled:cursor-not-allowed flex items-center justify-center shadow-[0_0_15px_rgba(79,70,229,0.5)] hover:shadow-[0_0_20px_rgba(99,102,241,0.7)] ml-2"
+        {/* Floating Input Area */}
+        <footer className="fixed bottom-0 w-full md:w-[calc(100%-18rem)] p-4 md:p-6 bg-gradient-to-t from-[#0B0C10] via-[#0B0C10]/90 to-transparent pb-8 right-0">
+          <div className="max-w-4xl mx-auto">
+            {/* Attachment Preview Area */}
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {attachments.map((file, idx) => (
+                  <div key={idx} className="flex items-center space-x-2 bg-indigo-500/20 border border-indigo-500/30 text-indigo-200 px-3 py-1.5 rounded-full text-xs font-medium animate-fade-in-up">
+                    <span className="truncate max-w-[150px]">{file.name}</span>
+                    <button type="button" onClick={() => removeAttachment(idx)} className="hover:text-white transition-colors"><X className="w-3.5 h-3.5" /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <form 
+              onSubmit={handleSubmit} 
+              className="flex items-center glass-input rounded-full p-2 transition-all focus-within:ring-2 focus-within:ring-indigo-500/50 focus-within:border-indigo-400 bg-[#161822]/80"
             >
-              {isLoading || isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5 ml-0.5" />}
-            </button>
-          </form>
-          <p className="text-center text-xs text-gray-500 mt-4 font-medium tracking-wide">
-             Secure Multi-Agent Environment • Groq Engine
-          </p>
-        </div>
-      </footer>
+              <label className="cursor-pointer text-gray-400 hover:text-indigo-400 transition-colors p-2 rounded-full hover:bg-white/5 ml-1">
+                <Paperclip className="w-5 h-5" />
+                <input type="file" multiple className="hidden" onChange={handleFileChange} />
+              </label>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask anything or attach files..."
+                className="flex-1 bg-transparent border-none focus:ring-0 px-3 py-2 md:px-4 md:py-3 text-white placeholder-gray-400 outline-none font-medium text-base"
+                disabled={isLoading || isUploading}
+              />
+              <button
+                type="submit"
+                disabled={isLoading || isUploading || (!input.trim() && attachments.length === 0)}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white p-3.5 rounded-full transition-all disabled:opacity-50 disabled:hover:bg-indigo-600 disabled:cursor-not-allowed flex items-center justify-center shadow-[0_0_15px_rgba(79,70,229,0.5)] hover:shadow-[0_0_20px_rgba(99,102,241,0.7)] ml-2"
+              >
+                {isLoading || isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5 ml-0.5" />}
+              </button>
+            </form>
+            <p className="text-center text-xs text-gray-500 mt-4 font-medium tracking-wide">
+               Secure Multi-Agent Environment • Groq Engine
+            </p>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }

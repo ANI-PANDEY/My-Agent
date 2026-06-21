@@ -1,18 +1,26 @@
 import json
-from langchain_core.messages import HumanMessage
+from typing import List
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langgraph.errors import GraphRecursionError
 from app.agent.graph import build_graph
-from langgraph.checkpoint.memory import MemorySaver
 import asyncio
 
-# Initialize in-memory checkpointer as a singleton so it persists across requests
-memory_saver = MemorySaver()
-
-async def stream_agent_events(session_id: str, user_input: str):
+async def stream_agent_events(session_id: str, messages: List[dict]):
     """
     Generator function that yields Server-Sent Events (SSE) as the LangGraph agent executes.
     """
-    inputs = {"chat_messages": [HumanMessage(content=user_input)]}
+    langchain_messages = []
+    for msg in messages:
+        role = msg.get("role")
+        content = msg.get("content", "")
+        if role == "user":
+            langchain_messages.append(HumanMessage(content=content))
+        elif role == "agent" or role == "assistant":
+            langchain_messages.append(AIMessage(content=content))
+        elif role == "system":
+            langchain_messages.append(SystemMessage(content=content))
+            
+    inputs = {"chat_messages": langchain_messages}
     
     config = {
         "configurable": {"thread_id": session_id},
@@ -21,7 +29,8 @@ async def stream_agent_events(session_id: str, user_input: str):
     
     try:
         workflow = build_graph()
-        agent_app = workflow.compile(checkpointer=memory_saver)
+        # Compiled without checkpointer so Vercel can run statelessly
+        agent_app = workflow.compile()
         
         # We use astream_events to get granular updates (node starts, tool calls, token generation)
         # version="v2" is required for LangGraph >= 0.1
