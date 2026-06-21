@@ -71,7 +71,7 @@ async def upload_file(file: UploadFile = File(...)):
             if mime_type == "image/jpg": mime_type = "image/jpeg"
             
             vision_llm = ChatGroq(
-                model="llama-3.2-90b-vision-preview",
+                model="llama-3.2-11b-vision-preview",
                 temperature=0,
                 api_key=settings.GROQ_API_KEY if settings.GROQ_API_KEY else "dummy_key"
             )
