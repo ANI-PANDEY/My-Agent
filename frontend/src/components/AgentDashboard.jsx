@@ -152,6 +152,18 @@ export default function AgentDashboard() {
             return;
         }
         setIsUploading(false);
+        // Save the hidden context in the UI state so it gets preserved in history
+        setMessages((prev) => {
+            const newMessages = [...prev];
+            const lastMessage = newMessages[newMessages.length - 1];
+            if (lastMessage && lastMessage.role === 'user') {
+                newMessages[newMessages.length - 1] = {
+                    ...lastMessage,
+                    hiddenContext: extractedContext
+                };
+            }
+            return newMessages;
+        });
     }
 
     setIsLoading(true);
@@ -161,7 +173,10 @@ export default function AgentDashboard() {
     const finalPayloadMessage = userPrompt + extractedContext;
 
     // Combines previous UI messages + new actual payload
-    const payloadMessages = messages.map(m => ({ role: m.role, content: m.content }));
+    const payloadMessages = messages.map(m => ({ 
+        role: m.role, 
+        content: m.hiddenContext ? `${m.content}${m.hiddenContext}` : m.content 
+    }));
     payloadMessages.push({ role: 'user', content: finalPayloadMessage });
 
     // 2. Add Empty Agent Message Placeholder (marked as streaming)
