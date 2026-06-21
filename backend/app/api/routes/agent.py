@@ -2,7 +2,10 @@ from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 import io
 import zipfile
 import PyPDF2
+import base64
 from groq import AsyncGroq
+from langchain_groq import ChatGroq
+from langchain_core.messages import HumanMessage
 from app.core.config import settings
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
@@ -61,6 +64,28 @@ async def upload_file(file: UploadFile = File(...)):
                 model="distil-whisper-large-v3-en"
             )
             extracted_text = f"[Audio Transcription: {transcription.text}]"
+        elif filename.endswith((".png", ".jpg", ".jpeg", ".webp", ".gif")):
+            # Extract data using Groq Vision Model
+            base64_image = base64.b64encode(content).decode('utf-8')
+            mime_type = f"image/{filename.split('.')[-1]}"
+            if mime_type == "image/jpg": mime_type = "image/jpeg"
+            
+            vision_llm = ChatGroq(
+                model="llama-3.2-90b-vision-preview",
+                temperature=0,
+                api_key=settings.GROQ_API_KEY if settings.GROQ_API_KEY else "dummy_key"
+            )
+            message = HumanMessage(
+                content=[
+                    {"type": "text", "text": "Analyze this image in extreme detail. If there is text, extract all of it perfectly. If there is code, write it out. If it is a diagram or UI, explain its structure and purpose."},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:{mime_type};base64,{base64_image}"},
+                    },
+                ]
+            )
+            response = await vision_llm.ainvoke([message])
+            extracted_text = f"[Image Analysis & Extracted Data:\n{response.content}]"
         else:
             # Assume text
             extracted_text = content.decode("utf-8")
