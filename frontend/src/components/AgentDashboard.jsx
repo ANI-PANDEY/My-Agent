@@ -57,7 +57,7 @@ export default function AgentDashboard() {
     if (currentAttachments.length > 0) {
         setIsUploading(true);
         try {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://my-agent-backend-snowy.vercel.app';
             for (const file of currentAttachments) {
                 const formData = new FormData();
                 formData.append('file', file);
@@ -90,7 +90,7 @@ export default function AgentDashboard() {
     try {
       // 3. Initiate POST request for the SSE stream
       // Connecting to FastAPI backend via env variable (or localhost for dev)
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://my-agent-backend-snowy.vercel.app';
       const response = await fetch(`${apiUrl}/api/chat/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
