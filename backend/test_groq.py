@@ -10,12 +10,14 @@ async def main():
     agent_app = workflow.compile()
     inputs = {"chat_messages": [HumanMessage(content="What is the capital of France?")]}
     
-    async for event in agent_app.astream_events(inputs, version="v2"):
-        if "data" in event and "chunk" in event["data"]:
-            chunk = event["data"]["chunk"]
-            if hasattr(chunk, "tool_calls") and chunk.tool_calls:
-                print(f"\n[Tool called: {chunk.tool_calls}]")
-            elif hasattr(chunk, "content") and chunk.content:
-                print(chunk.content, end="", flush=True)
-
+    async for chunk in agent_app.astream(inputs):
+        for node, values in chunk.items():
+            print(f"\n--- Node: {node} ---")
+            if "chat_messages" in values:
+                msg = values["chat_messages"][-1]
+                if hasattr(msg, "tool_calls") and msg.tool_calls:
+                    print(f"Tool Call: {msg.tool_calls}")
+                else:
+                    print(f"Content: {msg.content}")
+ 
 asyncio.run(main())

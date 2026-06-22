@@ -8,7 +8,14 @@ load_dotenv()
 async def main():
     llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
     llm_with_tools = llm.bind_tools(AVAILABLE_TOOLS)
-    res = await llm_with_tools.ainvoke("What is the capital of France?")
+    
+    from langchain_core.messages import SystemMessage
+    system_prompt = SystemMessage(content=(
+        "IMPORTANT: When you decide to call a tool, you MUST use the provided JSON schema. DO NOT output custom XML tags like <function=web_search>. Use native tool calling JSON format."
+    ))
+    
+    res = await llm_with_tools.ainvoke([system_prompt, "What is the capital of France?"])
+    print(repr(res))
     print(repr(res))
 
 asyncio.run(main())
